@@ -3,19 +3,10 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-/**
- * Users Controller
- *
- * @property \App\Model\Table\UsersTable $Users
- * @method \App\Model\Entity\User[]|\Cake\Datasource\ResultSetInterface paginate($object = null, array $settings = [])
- */
+
 class UsersController extends AppController
 {
-    /**
-     * Index method
-     *
-     * @return \Cake\Http\Response|null|void Renders view
-     */
+   
     public function index()
     {
         $users = $this->paginate($this->Users);
@@ -23,13 +14,6 @@ class UsersController extends AppController
         $this->set(compact('users'));
     }
 
-    /**
-     * View method
-     *
-     * @param string|null $id User id.
-     * @return \Cake\Http\Response|null|void Renders view
-     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
-     */
     public function view($id = null)
     {
         $user = $this->Users->get($id, [
@@ -39,11 +23,7 @@ class UsersController extends AppController
         $this->set(compact('user'));
     }
 
-    /**
-     * Add method
-     *
-     * @return \Cake\Http\Response|null|void Redirects on successful add, renders view otherwise.
-     */
+    
     public function add()
     {
         $user = $this->Users->newEmptyEntity();
@@ -59,13 +39,7 @@ class UsersController extends AppController
         $this->set(compact('user'));
     }
 
-    /**
-     * Edit method
-     *
-     * @param string|null $id User id.
-     * @return \Cake\Http\Response|null|void Redirects on successful edit, renders view otherwise.
-     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
-     */
+    
     public function edit($id = null)
     {
         $user = $this->Users->get($id, [
@@ -83,13 +57,6 @@ class UsersController extends AppController
         $this->set(compact('user'));
     }
 
-    /**
-     * Delete method
-     *
-     * @param string|null $id User id.
-     * @return \Cake\Http\Response|null|void Redirects to index.
-     * @throws \Cake\Datasource\Exception\RecordNotFoundException When record not found.
-     */
     public function delete($id = null)
     {
         $this->request->allowMethod(['post', 'delete']);
@@ -101,5 +68,38 @@ class UsersController extends AppController
         }
 
         return $this->redirect(['action' => 'index']);
+    }
+
+    public function beforeFilter(\Cake\Event\EventInterface $event)
+    {
+        parent::beforeFilter($event);
+        $this->Authentication->addUnauthenticatedActions(['login', 'add']);
+    }
+
+    public function login()
+    {
+        $this->request->allowMethod(['get', 'post']);
+        $result = $this->Authentication->getResult();
+
+        if ($result->isValid()) {
+            $redirect = $this->request->getQuery('redirect', [
+                'controller' => 'Articles',
+                'action' => 'index',
+            ]);
+            return $this->redirect($redirect);
+        }
+
+        if ($this->request->is('post') && !$result->isValid()) {
+            $this->Flash->error(__('Nome de usuário ou senha inválidos'));
+        }
+    }
+    
+    public function logout()
+    {
+        $result = $this->Authentication->getResult();
+        if ($result->isValid()) {
+            $this->Authentication->logout();
+            return $this->redirect(['controller' => 'Users', 'action' => 'login']);
+        }
     }
 }
