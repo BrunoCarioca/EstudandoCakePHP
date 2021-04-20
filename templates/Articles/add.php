@@ -13,7 +13,9 @@
                 <?php
                    echo $this->Form->control('user_id', ['type' => 'hidden', 'value' => 1]);
                    echo $this->Form->control('title');
+                   echo $this->Form->control('tag_string', ['type' => 'text']);
                    echo $this->Form->control('body', ['rows' => '5']);
+
                 ?>
             </fieldset>
             <?= $this->Form->button(__('Save Artigo')) ?>
