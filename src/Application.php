@@ -33,16 +33,24 @@ use Authentication\AuthenticationServiceInterface;
 use Authentication\AuthenticationServiceProviderInterface;
 use Authentication\Middleware\AuthenticationMiddleware;
 use Psr\Http\Message\ServerRequestInterface;
+use Authorization\AuthorizationService;
+use Authorization\AuthorizationServiceInterface;
+use Authorization\AuthorizationServiceProviderInterface;
+use Authorization\Middleware\AuthorizationMiddleware;
+use Authorization\Policy\OrmResolver;
 
 
 class Application extends BaseApplication
-    implements AuthenticationServiceProviderInterface
+    implements AuthenticationServiceProviderInterface,
+    AuthorizationServiceProviderInterface
 {
   
     public function bootstrap(): void
     {
         // Call parent to load bootstrap from files.
-        parent::bootstrap();
+        parent::bootstrap(); 
+       
+
 
         if (PHP_SAPI === 'cli') {
             $this->bootstrapCli();
@@ -61,7 +69,9 @@ class Application extends BaseApplication
             $this->addPlugin('DebugKit');
         }
 
-        // Load more plugins here
+        // Load more plugins here 
+        $this->addPlugin('Authorization');
+
     }
 
    
@@ -90,39 +100,46 @@ class Application extends BaseApplication
             ->add(new CsrfProtectionMiddleware([
                 'httponly' => true,
             ]));
+        $middlewareQueue->add(new AuthorizationMiddleware($this));
 
         return $middlewareQueue;
     }
 
     public function getAuthenticationService(ServerRequestInterface $request): AuthenticationServiceInterface
-{
-    $authenticationService = new AuthenticationService([
-        'unauthenticatedRedirect' => '/users/login',
-        'queryParam' => 'redirect',
-    ]);
+    {
+        $authenticationService = new AuthenticationService([
+            'unauthenticatedRedirect' => '/users/login',
+            'queryParam' => 'redirect',
+        ]);
 
-    // Load identifiers, ensure we check email and password fields
-    $authenticationService->loadIdentifier('Authentication.Password', [
-        'fields' => [
-            'username' => 'email',
-            'password' => 'password',
-        ]
-    ]);
+        // Load identifiers, ensure we check email and password fields
+        $authenticationService->loadIdentifier('Authentication.Password', [
+            'fields' => [
+                'username' => 'email',
+                'password' => 'password',
+            ]
+        ]);
 
-    // Load the authenticators, you want session first
-    $authenticationService->loadAuthenticator('Authentication.Session');
-    // Configure form data check to pick email and password
-    $authenticationService->loadAuthenticator('Authentication.Form', [
-        'fields' => [
-            'username' => 'email',
-            'password' => 'password',
-        ],
-        'loginUrl' => '/users/login',
-    ]);
+        // Load the authenticators, you want session first
+        $authenticationService->loadAuthenticator('Authentication.Session');
+        // Configure form data check to pick email and password
+        $authenticationService->loadAuthenticator('Authentication.Form', [
+            'fields' => [
+                'username' => 'email',
+                'password' => 'password',
+            ],
+            'loginUrl' => '/users/login',
+        ]);
 
-    return $authenticationService;
-}
+        return $authenticationService;
+    }
    
+    public function getAuthorizationService(ServerRequestInterface $request): AuthorizationServiceInterface
+    {
+        $resolver = new OrmResolver();
+    
+        return new AuthorizationService($resolver);
+    }
     public function services(ContainerInterface $container): void
     {
     }
@@ -137,6 +154,7 @@ class Application extends BaseApplication
         }
 
         $this->addPlugin('Migrations');
+       
 
         // Load more plugins here
     }

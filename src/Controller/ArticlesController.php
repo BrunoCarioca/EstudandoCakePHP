@@ -17,8 +17,10 @@ class ArticlesController extends AppController
 
     public function index()
     {
-        $articles = $this->Paginator->paginate($this->Articles->find());
-        $this->set(compact('articles'));
+        $articleslist = $this->Paginator->paginate($this->Articles->find());
+       
+        $this->Authorization->skipAuthorization();
+        $this->set(compact('articleslist'));
     }
 
     public function view($slug = null)
@@ -27,17 +29,20 @@ class ArticlesController extends AppController
             ->findBySlug($slug)
             ->contain('Tags')
             ->firstOrFail();
+        $this->Authorization->skipAuthorization();
         $this->set(compact('article'));
     }
 
     public function add()
     {
-        $article = $this->Articles->newEmptyEntity();
+        $article = $this->Articles->newEmptyEntity(); 
+        $this->Authorization->authorize($article);
+
         if ($this->request->is('post')) {
             $article = $this->Articles->patchEntity($article,
             $this->request->getData());
 
-            $article->user_id = 1;
+            $article->user_id = $this->request->getAttribute('identity')->getIdentifier();
 
             if ($this->Articles->save($article)) {
                 $this->Flash->success(__('Seu artigo foi salvo!'));
@@ -50,7 +55,6 @@ class ArticlesController extends AppController
 
         // Set tags to the view context
         $this->set('tags', $tags);
-    
         $this->set('article', $article);
     }
 
@@ -60,9 +64,12 @@ class ArticlesController extends AppController
             ->findBySlug($slug)
             ->contain('Tags')
             ->firstOrFail();
-        
+        $this->Authorization->authorize($article);
         if ($this->request->is(['post', 'put'])) {
-            $this->Articles->patchEntity($article, $this->request->getData());
+            $this->Articles->patchEntity($article, $this->request->getData(), [
+                'accessibleFields' => ['user_id' => false]
+            ]);
+            
             if ($this->Articles->save($article)) {
                 $this->Flash->success(__('Seu artigo foi atualizado!'));
                 return $this->redirect(['action' => 'index']);
@@ -75,24 +82,31 @@ class ArticlesController extends AppController
 
         // Set tags to the view context
         $this->set('tags', $tags);
-
+      
         $this->set('article', $article);
+       
+
     }
 
     public function delete($slug)
     {
+        
+        
         $this->request->allowMethod(['post', 'delete']);
-
-        $article = $this->Articles->findBySlug($slug)->firstOrFail();
+        $article = $this->Articles->findBySlug($slug)->firstOrFail(); 
+        $this->Authorization->authorize($article);
+        
         if ($this->Articles->delete($article)) {
             $this->Flash->success(__('O {0} artigo foi deletado!', $article->title));
             return $this->redirect(['action' => 'index']);
         }
+       
     }
 
     public function tags()
     {
         $tags = $this->request->getParam('pass');
+        $this->Authorization->skipAuthorization();
 
         $articles = $this->Articles->find('tagged', [
             'tags' => $tags

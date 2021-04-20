@@ -80,6 +80,8 @@ class UsersController extends AppController
     {
         $this->request->allowMethod(['get', 'post']);
         $result = $this->Authentication->getResult();
+        $this->Authorization->skipAuthorization();
+
 
         if ($result->isValid()) {
             $redirect = $this->request->getQuery('redirect', [
@@ -92,6 +94,7 @@ class UsersController extends AppController
         if ($this->request->is('post') && !$result->isValid()) {
             $this->Flash->error(__('Nome de usuário ou senha inválidos'));
         }
+        
     }
     
     public function logout()
@@ -99,6 +102,7 @@ class UsersController extends AppController
         $result = $this->Authentication->getResult();
         if ($result->isValid()) {
             $this->Authentication->logout();
+            $this->Authorization->skipAuthorization();
             return $this->redirect(['controller' => 'Users', 'action' => 'login']);
         }
     }
